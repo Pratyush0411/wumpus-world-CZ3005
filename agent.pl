@@ -45,6 +45,61 @@ getforwardpos(X,Y):-
     Y = Yi,
     !.
 
+% Get Direction
+getrightdir(D):-
+    current(Xi,Yi,Di),
+    Di == rnorth,
+    Di is reast
+    !.
+
+getrightdir(D):-
+    current(Xi,Yi,Di),
+    Di == reast,
+    Di is rsouth
+    !.
+
+getrightdir(D):-
+    current(Xi,Yi,Di),
+    Di == rsouth,
+    Di is rwest
+    !.
+
+getrightdir(D):-
+    current(Xi,Yi,Di),
+    Di == rwest,
+    Di is rnorth
+    !.
+
+getleftdir(D):-
+    current(Xi,Yi,Di),
+    Di == rnorth,
+    Di is rwest
+    !.
+
+getleftdir(D):-
+    current(Xi,Yi,Di),
+    Di == rwest,
+    Di is rsouth
+    !.
+
+getleftdir(D):-
+    current(Xi,Yi,Di),
+    Di == rsouth,
+    Di is reast
+    !.
+
+getleftdir(D):-
+    current(Xi,Yi,Di),
+    Di == reast,
+    Di is rnorth
+    !.
+
+%change direction
+changedir(D):-
+    current(X,Y,_),
+    retractall(current(_,_,_)),
+    assertz(current(X,Y,D))
+    !.
 
 % change position
 changepos(X,Y):-
@@ -59,6 +114,19 @@ action(forward):-
     getforwardpos(X,Y),
     changepos(X,Y),
     !.
+
+% turn right
+action(turnright):-
+    getrightdir(D),
+    changedir(D),
+    !.
+
+%turn left
+action(turnleft):-
+    getleftdir(D),
+    changedir(D),
+    !.
+
 
 
 
