@@ -49,56 +49,56 @@ getforwardpos(X,Y):-
 getrightdir(D):-
     current(Xi,Yi,Di),
     Di == rnorth,
-    Di is reast
+    D = reast,
     !.
 
 getrightdir(D):-
     current(Xi,Yi,Di),
     Di == reast,
-    Di is rsouth
+    D = rsouth,
     !.
 
 getrightdir(D):-
     current(Xi,Yi,Di),
     Di == rsouth,
-    Di is rwest
+    D = rwest,
     !.
 
 getrightdir(D):-
     current(Xi,Yi,Di),
     Di == rwest,
-    Di is rnorth
+    D = rnorth,
     !.
 
 getleftdir(D):-
     current(Xi,Yi,Di),
     Di == rnorth,
-    Di is rwest
+    D = rwest,
     !.
 
 getleftdir(D):-
     current(Xi,Yi,Di),
     Di == rwest,
-    Di is rsouth
+    D = rsouth,
     !.
 
 getleftdir(D):-
     current(Xi,Yi,Di),
     Di == rsouth,
-    Di is reast
+    D = reast,
     !.
 
 getleftdir(D):-
     current(Xi,Yi,Di),
     Di == reast,
-    Di is rnorth
+    D = rnorth,
     !.
 
 %change direction
 changedir(D):-
     current(X,Y,_),
     retractall(current(_,_,_)),
-    assertz(current(X,Y,D))
+    assertz(current(X,Y,D)),
     !.
 
 % change position
