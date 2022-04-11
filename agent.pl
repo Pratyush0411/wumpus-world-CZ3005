@@ -10,7 +10,7 @@
 
 :- dynamic(
     [
-    action/1,
+    action/4,
     current/3,
     moveforward/2,
     safe/2,
@@ -165,17 +165,40 @@ action(turnleft,X,Y,D):-
 % action(turnright).
 % action(forward).
 
+% if len(l) < 1:
+%   dummy = original
+%   safe(X,Y)
+% elif len(l) > 1:
+%   safe(dummy)
+
+list_length([],0).
+list_length([_|TAIL],N) :- list_length(TAIL,N1), N is N1 + 1.
+
+resetdummy:-
+    current(X,Y,D),
+    retractall(dummycurrent),
+    dummycurrent(X,Y,D).
 
 explore([]).
 explore([A|R]):-
-    current(X,Y,D),
-    retractall(dummycurrent(_,_,_)),
-    assertz(dummycurrent(X,Y,D)),
+    % list_length(R, len),
+    % len < 1,
+    % resetdummy,
     explore(R),
     action(A,X,Y,D),
     safe(X,Y),
     changedummypos(X,Y),
     changedummydir(D).
+
+% explore([A|R]):-
+%     list_length(R, len),
+%     len > 1,
+%     explore(R),
+%     action(A,X,Y,D),
+%     safe(X,Y),
+%     changedummypos(X,Y),
+%     changedummydir(D).
+
 
 
 
