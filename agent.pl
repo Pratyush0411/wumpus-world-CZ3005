@@ -180,29 +180,125 @@ resetdummy:-
     dummycurrent(X,Y,D).
 
 explore([]).
-explore([A|R]):-
-    % list_length(R, len),
-    % len < 1,
-    % resetdummy,
-    explore(R),
-    action(A,X,Y,D),
-    safe(X,Y),
-    changedummypos(X,Y),
-    changedummydir(D).
-
 % explore([A|R]):-
-%     list_length(R, len),
-%     len > 1,
+%     % list_length(R, len),
+%     % len < 1,
+%     % resetdummy,
 %     explore(R),
 %     action(A,X,Y,D),
 %     safe(X,Y),
 %     changedummypos(X,Y),
 %     changedummydir(D).
 
+explore([L]):-
+    current(X,Y,D),
+    D == rnorth,
+    safe(X,Y+1),
+    L = [forward]
+    !.
 
+explore([L]):-
+    current(X,Y,D),
+    D == rsouth,
+    safe(X,Y-1),
+    L = [forward]
+    !.
 
+explore([L]):-
+    current(X,Y,D),
+    D == reast,
+    safe(X+1,Y),
+    L = [forward]
+    !.
 
-    
+explore([L]):-
+    current(X,Y,D),
+    D == rwest,
+    safe(X-1,Y),
+    L = [forward]
+    !.
 
+explore([L]):-
+    current(X,Y,D),
+    D == rsouth,
+    safe(X+1,Y),
+    L = [turnleft,forward]
+    !.
 
+explore([L]):-
+    current(X,Y,D),
+    D == rnorth,
+    safe(X+1,Y),
+    L = [turnright,forward]
+    !.
+
+explore([L]):-
+    current(X,Y,D),
+    D == rwest,
+    safe(X+1,Y),
+    L = [turnright,turnright,forward]
+    !.
+
+explore([L]):-
+    current(X,Y,D),
+    D == rnorth,
+    safe(X-1,Y),
+    L = [turnleft,forward]
+    !.
+
+explore([L]):-
+    current(X,Y,D),
+    D == rsouth,
+    safe(X-1,Y),
+    L = [turnright,forward]
+    !.
+
+explore([L]):-
+    current(X,Y,D),
+    D == reast,
+    safe(X-1,Y),
+    L = [turnleft, turnleft, forward]
+    !.
+
+explore([L]):-
+    current(X,Y,D),
+    D == reast,
+    safe(X,Y+1),
+    L = [turnleft, forward]
+    !.
+
+explore([L]):-
+    current(X,Y,D),
+    D == rsouth,
+    safe(X,Y+1),
+    L = [turnleft, turnleft, forward]
+    !.
+
+explore([L]):-
+    current(X,Y,D),
+    D == rwest,
+    safe(X,Y+1),
+    L = [turnright, forward]
+    !.
+
+explore([L]):-
+    current(X,Y,D),
+    D == rnorth,
+    safe(X,Y-1),
+    L = [turnright, turnright, forward]
+    !.
+
+explore([L]):-
+    current(X,Y,D),
+    D == reast,
+    safe(X,Y-1),
+    L = [turnright, forward]
+    !.  
+
+explore([L]):-
+    current(X,Y,D),
+    D == rwest,
+    safe(X,Y-1),
+    L = [turnleft, forward]
+    !.
 
