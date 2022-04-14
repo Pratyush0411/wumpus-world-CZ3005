@@ -1,18 +1,20 @@
 :-abolish(current/3).
-:-abolish(moveforward/2).
 :-abolish(visited/2).
 :-abolish(action/1).
 :-abolish(safe/2).
 :-abolish(wumpus/2).
 :-abolish(dummycurrent/3).
-
-
+:-abolish(hasarrow/0).
+:-abolish(tingle/2).
+:-abolish(glitter/2).
+:-abolish(confundus/2).
+:-abolish(explore_loop/4).
+:-abolish(tree_visited/3).
 
 :- dynamic(
     [
     action/4,
     current/3,
-    moveforward/2,
     safe/2,
     visited/2,
     hasarrow/0,
@@ -20,15 +22,24 @@
     glitter/2,
     confundus/2,
     wumpus/2,
-    dummycurrent/3
+    dummycurrent/3,
+    tree_visited/3
     ]
 ).
 
-% KB
+% visited
 visited(0,0).
+visited(0,1).
+
+
+% current position
+
 current(0,0,rsouth).
+
+% dummy current position
 dummycurrent(0,0,rsouth).
 
+% has arrow
 hasarrow:-
     true.
 
@@ -42,28 +53,28 @@ safe(X,Y):-
 
 % Get position
 getforwardpos(X,Y):-
-    current(Xi,Yi,Di),
+    dummycurrent(Xi,Yi,Di),
     Di==rnorth,
     X = Xi,
     Y is Yi+1,
     !.
 
 getforwardpos(X,Y):-
-    current(Xi,Yi,Di),
+    dummycurrent(Xi,Yi,Di),
     Di==rsouth,
     X = Xi,
     Y is Yi-1,
     !.
 
 getforwardpos(X,Y):-
-    current(Xi,Yi,Di),
+    dummycurrent(Xi,Yi,Di),
     Di==reast,
     X is Xi+1,
     Y = Yi,
     !.
 
 getforwardpos(X,Y):-
-    current(Xi,Yi,Di),
+    dummycurrent(Xi,Yi,Di),
     Di==rwest,
     X is Xi-1,
     Y = Yi,
@@ -71,49 +82,49 @@ getforwardpos(X,Y):-
 
 % Get Direction
 getrightdir(D):-
-    current(_,_,Di),
+    dummycurrent(_,_,Di),
     Di == rnorth,
     D = reast,
     !.
 
 getrightdir(D):-
-    current(_,_,Di),
+    dummycurrent(_,_,Di),
     Di == reast,
     D = rsouth,
     !.
 
 getrightdir(D):-
-    current(_,_,Di),
+    dummycurrent(_,_,Di),
     Di == rsouth,
     D = rwest,
     !.
 
 getrightdir(D):-
-    current(_,_,Di),
+    dummycurrent(_,_,Di),
     Di == rwest,
     D = rnorth,
     !.
 
 getleftdir(D):-
-    current(_,_,Di),
+    dummycurrent(_,_,Di),
     Di == rnorth,
     D = rwest,
     !.
 
 getleftdir(D):-
-    current(_,_,Di),
+    dummycurrent(_,_,Di),
     Di == rwest,
     D = rsouth,
     !.
 
 getleftdir(D):-
-    current(_,_,Di),
+    dummycurrent(_,_,Di),
     Di == rsouth,
     D = reast,
     !.
 
 getleftdir(D):-
-    current(_,_,Di),
+    dummycurrent(_,_,Di),
     Di == reast,
     D = rnorth,
     !.
@@ -149,143 +160,193 @@ changedummypos(X,Y):-
 % move forward
 action(forward,X,Y,D):-
     getforwardpos(X,Y),
-    current(_,_,D).
+    dummycurrent(_,_,D).
 
 % turn right
 action(turnright,X,Y,D):-
     getrightdir(D),
-    current(X,Y,_).
+    dummycurrent(X,Y,_).
 
 %turn left
 action(turnleft,X,Y,D):-
     getleftdir(D),
-    current(X,Y,_).
-
-% action(turnleft).
-% action(turnright).
-% action(forward).
-
-% if len(l) < 1:
-%   dummy = original
-%   safe(X,Y)
-% elif len(l) > 1:
-%   safe(dummy)
-
-list_length([],0).
-list_length([_|TAIL],N) :- list_length(TAIL,N1), N is N1 + 1.
+    dummycurrent(X,Y,_).
 
 resetdummy:-
     current(X,Y,D),
-    retractall(dummycurrent),
-    dummycurrent(X,Y,D).
+    retractall(dummycurrent(_,_,_)),
+    assertz(dummycurrent(X,Y,D)).
 
-% explore([]).
+
 % explore([A|R]):-
-%     % list_length(R, len),
-%     % len < 1,
-%     % resetdummy,
-%     explore(R),
+%     length(R,0),
 %     action(A,X,Y,D),
 %     safe(X,Y),
-%     changedummypos(X,Y),
-%     changedummydir(D).
+%     \+ visited(X,Y).
+
+% explore([A|R]):-
+%     length(R,0),
+%     action(A,X,Y,D),
+%     safe(X,Y),
+%     visited(X,Y),
+%     X==0,
+%     Y==0.
+
+% explore([A|R]):-
+%     \+ length(R,0),
+%     dummycurrent(Xi,Yi,Di),
+%     action(A,X,Y,D),
+%     safe(X,Y),
+%     assert(dummycurrent(X,Y,D)),
+%     explore(R),
+%     retractall(dummycurrent(_,_,_)),
+%     assert(dummycurrent(Xi,Yi,Di)).
+
+
+arc(A,X,Y,D,Xi,Yi,Di):-
+    Di == rnorth,
+    A == forward,
+    X = Xi,
+    Y is Yi+1,
+    D = Di.
+
+arc(A,X,Y,D,Xi,Yi,Di):-
+    Di == rsouth,
+    A == forward,
+    X = Xi,
+    Y is Yi-1,
+    D = Di.
+
+arc(A,X,Y,D,Xi,Yi,Di):-
+    Di == rwest,
+    A == forward,
+    X is Xi-1,
+    Y = Yi,
+    D = Di.
+
+arc(A,X,Y,D,Xi,Yi,Di):-
+    Di == reast,
+    A == forward,
+    X is Xi+1,
+    Y = Yi,
+    D = Di.
+
+arc(A,X,Y,D,Xi,Yi,Di):-
+    Di == rnorth,
+    A == turnright,
+    X = Xi,
+    Y = Yi,
+    D = reast.
+
+arc(A,X,Y,D,Xi,Yi,Di):-
+    Di == rsouth,
+    A == turnright,
+    X = Xi,
+    Y = Yi,
+    D = rwest.
+
+arc(A,X,Y,D,Xi,Yi,Di):-
+    Di == reast,
+    A == turnright,
+    X = Xi,
+    Y = Yi,
+    D = rsouth.
+
+arc(A,X,Y,D,Xi,Yi,Di):-
+    Di == rwest,
+    A == turnright,
+    X = Xi,
+    Y = Yi,
+    D = rnorth.
+
+arc(A,X,Y,D,Xi,Yi,Di):-
+    Di == rnorth,
+    A == turnleft,
+    X = Xi,
+    Y = Yi,
+    D = rwest.
+
+arc(A,X,Y,D,Xi,Yi,Di):-
+    Di == rsouth,
+    A == turnleft,
+    X = Xi,
+    Y = Yi,
+    D = reast.
+
+arc(A,X,Y,D,Xi,Yi,Di):-
+    Di == reast,
+    A == turnleft,
+    X = Xi,
+    Y = Yi,
+    D = rnorth.
+
+arc(A,X,Y,D,Xi,Yi,Di):-
+    Di == rwest,
+    A == turnleft,
+    X = Xi,
+    Y = Yi,
+    D = rsouth.
+
+
+explore_loop(L,Xi,Yi,Di):-
+    assertz(tree_visited(Xi,Yi,Di)),
+    member(A,[forward,turnleft,turnright]),
+    arc(A,X,Y,D,Xi,Yi,Di),
+    safe(X,Y),
+    \+ tree_visited(X,Y,D),
+    \+ visited(X,Y),
+    L = [A].
+
+explore_loop(L,Xi,Yi,Di):-
+    assertz(tree_visited(Xi,Yi,Di)),
+    member(A,[forward,turnright,turnleft]),
+    arc(A,X,Y,D,Xi,Yi,Di),
+    safe(X,Y),
+    visited(X,Y),
+    \+ tree_visited(X,Y,D),
+    explore_loop(Lr,X,Y,D),
+    append([A],Lr,L).
+
+return_loop(L,Xi,Yi,Di):-
+    assertz(tree_visited(Xi,Yi,Di)),
+    member(A,[forward,turnleft,turnright]),
+    arc(A,X,Y,D,Xi,Yi,Di),
+    safe(X,Y),
+    \+ tree_visited(X,Y,D),
+    visited(X,Y),
+    X==0,
+    Y==0,
+    L = [A].
+
+return_loop(L,Xi,Yi,Di):-
+    assertz(tree_visited(Xi,Yi,Di)),
+    member(A,[forward,turnright,turnleft]),
+    arc(A,X,Y,D,Xi,Yi,Di),
+    safe(X,Y),
+    visited(X,Y),
+    \+ tree_visited(X,Y,D),
+    return_loop(Lr,X,Y,D),
+    append([A],Lr,L).
+
 
 explore(L):-
-    current(X,Y,D),
-    D == rnorth,
-    safe(X,Y+1),
-    L = [forward].
+
+    retractall(tree_visited(_,_,_)),
+    current(Xi,Yi,Di),
+    explore_loop(Lf,Xi,Yi,Di),
+    L = Lf.
 
 explore(L):-
-    current(X,Y,D),
-    D == rsouth,
-    safe(X,Y-1),
-    L = [forward].
 
-explore(L):-
-    current(X,Y,D),
-    D == reast,
-    safe(X+1,Y),
-    L = [forward],
-    !.
+    retractall(tree_visited(_,_,_)),
+    current(Xi,Yi,Di),
+    \+ explore_loop(_,Xi,Yi,Di),
+    retractall(tree_visited(_,_,_)),
+    return_loop(Lf,Xi,Yi,Di),
+    L=Lf.
 
-explore(L):-
-    current(X,Y,D),
-    D == rwest,
-    safe(X-1,Y),
-    L = [forward].
 
-explore(L):-
-    current(X,Y,D),
-    D == rsouth,
-    safe(X+1,Y),
-    L = [turnleft,forward].
 
-explore(L):-
-    current(X,Y,D),
-    D == rnorth,
-    safe(X+1,Y),
-    L = [turnright,forward].
 
-explore(L):-
-    current(X,Y,D),
-    D == rwest,
-    safe(X+1,Y),
-    L = [turnright,turnright,forward].
+
     
-
-explore(L):-
-    current(X,Y,D),
-    D == rnorth,
-    safe(X-1,Y),
-    L = [turnleft,forward].
-   
-
-explore(L):-
-    current(X,Y,D),
-    D == rsouth,
-    safe(X-1,Y),
-    L = [turnright,forward].
-
-explore(L):-
-    current(X,Y,D),
-    D == reast,
-    safe(X-1,Y),
-    L = [turnleft, turnleft, forward].
-
-explore(L):-
-    current(X,Y,D),
-    D == reast,
-    safe(X,Y+1),
-    L = [turnleft, forward].
-
-explore(L):-
-    current(X,Y,D),
-    D == rsouth,
-    safe(X,Y+1),
-    L = [turnleft, turnleft, forward].
-
-explore(L):-
-    current(X,Y,D),
-    D == rwest,
-    safe(X,Y+1),
-    L = [turnright, forward].
-
-explore(L):-
-    current(X,Y,D),
-    D == rnorth,
-    safe(X,Y-1),
-    L = [turnright, turnright, forward].
-
-explore(L):-
-    current(X,Y,D),
-    D == reast,
-    safe(X,Y-1),
-    L = [turnright, forward].
-
-explore(L):-
-    current(X,Y,D),
-    D == rwest,
-    safe(X,Y-1),
-    L = [turnleft, forward].
-
