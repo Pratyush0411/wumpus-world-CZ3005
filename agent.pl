@@ -290,7 +290,7 @@ arc(A,X,Y,D,Xi,Yi,Di):-
 
 explore_loop(L,Xi,Yi,Di):-
     assertz(tree_visited(Xi,Yi,Di)),
-    member(A,[forward,turnleft,turnright]),
+    member(A,[forward,turnright,turnleft]),
     arc(A,X,Y,D,Xi,Yi,Di),
     safe(X,Y),
     \+ tree_visited(X,Y,D),
@@ -309,13 +309,13 @@ explore_loop(L,Xi,Yi,Di):-
 
 return_loop(L,Xi,Yi,Di):-
     assertz(tree_visited(Xi,Yi,Di)),
-    member(A,[forward,turnleft,turnright]),
+    member(A,[forward,turnright,turnleft]),
     arc(A,X,Y,D,Xi,Yi,Di),
     safe(X,Y),
     \+ tree_visited(X,Y,D),
-    visited(X,Y),
     X==0,
     Y==0,
+    D == rnorth,
     L = [A].
 
 return_loop(L,Xi,Yi,Di):-
@@ -323,7 +323,6 @@ return_loop(L,Xi,Yi,Di):-
     member(A,[forward,turnright,turnleft]),
     arc(A,X,Y,D,Xi,Yi,Di),
     safe(X,Y),
-    visited(X,Y),
     \+ tree_visited(X,Y,D),
     return_loop(Lr,X,Y,D),
     append([A],Lr,L).
@@ -342,8 +341,8 @@ explore(L):-
     current(Xi,Yi,Di),
     \+ explore_loop(_,Xi,Yi,Di),
     retractall(tree_visited(_,_,_)),
-    return_loop(Lf,Xi,Yi,Di),
-    L=Lf.
+    return_loop(Lj,Xi,Yi,Di),
+    L=Lj.
 
 
 
