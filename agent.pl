@@ -13,23 +13,28 @@
 :-abolish(arc/7).
 :-abolish(wall/2).
 :-abolish(stench/2).
+:-abolish(coinexist/0).
+:-abolish(iswumpusalive/0).
+:-abolish(adj/4).
 
-abolishAll:-
-    abolish(current/3),
-    abolish(visited/2),
-    abolish(action/4),
-    abolish(safe/2),
-    abolish(wumpus/2),
-    abolish(hasarrow/0),
-    abolish(tingle/2),
-    abolish(glitter/2),
-    abolish(confundus/2),
-    abolish(explore_loop/4),
-    abolish(tree_visited/3),
-    abolish(return_loop/4),
-    abolish(arc/7),
-    abolish(wall/2),
-    abolish(stench/2).
+% abolishAll:-
+%     abolish(current/3),
+%     abolish(visited/2),
+%     abolish(action/4),
+%     abolish(safe/2),
+%     abolish(wumpus/2),
+%     abolish(hasarrow/0),
+%     abolish(tingle/2),
+%     abolish(glitter/2),
+%     abolish(confundus/2),
+%     abolish(explore_loop/4),
+%     abolish(tree_visited/3),
+%     abolish(return_loop/4),
+%     abolish(arc/7),
+%     abolish(wall/2),
+%     abolish(stench/2),
+%     abolish(coinexist/0),
+%     abolish(iswumpusalive/0).
 
 
 :- dynamic(
@@ -46,25 +51,31 @@ abolishAll:-
     tree_visited/3,
     arc/7,
     wall/2,
-    stench/2
+    stench/2,
+    adj/4,
+    iswumpusalive/0,
+    coinexist/0
     ]
 ).
 
 % visited
 visited(0,0).
-visited(0,1).
-
+iswumpusalive:-
+    true.
 
 % current position
 wumpus(X,Y):-
-    \+ visited(X,Y),
+    stench(Xa,Ya),
     adj(Xa,Ya,X,Y),
-    stench(Xa,Ya).
+    \+ visited(X,Y).
 
 current(0,0,rsouth).
 
 % has arrow
 hasarrow:-
+    true.
+
+coinexist:- 
     true.
 
 % Safe position
@@ -77,7 +88,7 @@ safe(X,Y):-
 
 % Get position
 getmoveforwardpos(X,Y):-
-    dummycurrent(Xi,Yi,Di),
+    current(Xi,Yi,Di),
     Di==rnorth,
     X = Xi,
     Y is Yi+1,
@@ -185,31 +196,6 @@ action(pickup):-
     glitter(Xi,Yi),
     retract(glitter(Xi,Yi)).
 
-% explore([A|R]):-
-%     length(R,0),
-%     action(A,X,Y,D),
-%     safe(X,Y),
-%     \+ visited(X,Y).
-
-% explore([A|R]):-
-%     length(R,0),
-%     action(A,X,Y,D),
-%     safe(X,Y),
-%     visited(X,Y),
-%     X==0,
-%     Y==0.
-
-% explore([A|R]):-
-%     \+ length(R,0),
-%     dummycurrent(Xi,Yi,Di),
-%     action(A,X,Y,D),
-%     safe(X,Y),
-%     assert(dummycurrent(X,Y,D)),
-%     explore(R),
-%     retractall(dummycurrent(_,_,_)),
-%     assert(dummycurrent(Xi,Yi,Di)).
-
-
 arc(A,X,Y,D,Xi,Yi,Di):-
     Di == rnorth,
     A == moveforward,
@@ -294,21 +280,38 @@ arc(A,X,Y,D,Xi,Yi,Di):-
     Y = Yi,
     D = rsouth.
 
-adj(Xa,Ya,Xi,Yi):-
-    Xa is Xi+1,
-    Ya = Yi.
+% adj(Xa,Ya,Xi,Yi):-
+%     Xa is Xi+1,
+%     Ya = Yi.
+
+% adj(Xa,Ya,Xi,Yi):-
+%     Xa is Xi-1,
+%     Ya = Yi.
+
+% adj(Xa,Ya,Xi,Yi):-
+%     Xa = Xi,
+%     Ya is Yi+1.
+
+% adj(Xa,Ya,Xi,Yi):-
+%     Xa = Xi,
+%     Ya is Yi-1.
 
 adj(Xa,Ya,Xi,Yi):-
-    Xa is Xi-1,
-    Ya = Yi.
+    Xi = Xa,
+    Yi is Ya-1.
 
 adj(Xa,Ya,Xi,Yi):-
-    Xa = Xi,
-    Ya is Yi+1.
+    Xi is Xa+1,
+    Yi = Ya.
 
 adj(Xa,Ya,Xi,Yi):-
-    Xa = Xi,
-    Ya is Yi-1.
+    Xi is Xa-1,
+    Yi = Ya.
+
+adj(Xa,Ya,Xi,Yi):-
+    Xi = Xa,
+    Yi is Ya+1.
+
 
 explore_loop(L,Xi,Yi,Di):-
     assertz(tree_visited(Xi,Yi,Di)),
@@ -369,46 +372,116 @@ explore(L):-
 
 
 confundus(X,Y):-
-    \+ visited(X,Y),
+    tingle(Xa,Ya),
     adj(Xa,Ya,X,Y),
-    tingle(Xa,Ya).
+    \+ visited(X,Y).
 
-reposition(L):-
+confundusResetPercept:-
+    retractall(current(_,_,_)),
+    retractall(visited(_,_)),
+    retractall(safe(_,_)),
+    retractall(tingle(_,_)),
+    retractall(glitter(_,_)),
+    retractall(tree_visited(_,_,_)),
+    retractall(wall(_,_)),
+    retractall(stench(_,_)).
 
-
-move(A, [_,on,_,_,_,_]):-
-    action(A),
+percept(0).
+percept(I):-
+    I == 1,
     current(X,Y,_),
-    stench(X,Y).
+    assertz(stench(X,Y)).
 
-move(A, [_,_,on,_,_,_]):-
-    action(A),
+percept(I):-
+    I == 2,
     current(X,Y,_),
-    tingle(X,Y).
+    assertz(tingle(X,Y)).
 
-move(A,[_,_,_,on,_,_]):-
-    action(A),
+percept(I):-
+    I == 3,
     current(X,Y,_),
-    glitter(X,Y).
+    assertz(glitter(X,Y)).
 
-move(A,[_,_,_,_,on,_]):-
+percept(I):-
+    I == 4,
+    current(X,Y,_),
+    assertz(wall(X,Y)).
+
+percept(I):-
+    I == 5,
+    retractall(stench(_,_)),
+    retractall(wumpus(_,_)),
+    retractall(iswumpusalive).
+
+move_loop(L,I):-
+    nth0(I,L,on),
+    percept(I),
+    I < 5,
+    C is I+1,
+    move_loop(L,C).
+
+move_loop(L,I):-
+    nth0(I,L,off),
+    I < 5,
+    C is I+1,
+    move_loop(L,C).
+
+move_loop(L,I):-
+    I == 5,
+    nth0(I,L,off).
+
+move_loop(L,I):-
+    I == 5,
+    nth0(I,L,on),
+    percept(I).
+
+move(A,L):-
+    nth0(0,L,off),
+    nth0(4,L,on),
     current(Xi,Yi,Di),
-    A == moveforward,
     action(A),
-    current(X,Y,_),
-    wall(X,Y),
+    move_loop(L,0),
     retractall(current(_,_,_)),
     assertz(current(Xi,Yi,Di)).
 
-move(A,[_,_,_,_,_,on]):-
-    A == shoot,
-    retractall(stench(_,_,_)),
-    retractall(wumpus(_,_,_)).
+move(A,L):-
+    nth0(0,L,off),
+    nth0(4,L,off),
+    action(A),
+    move_loop(L,0).
 
-move(A,[off,off,off,off,off,off]):-
-    action(A).
+move(_,L):-
+    nth0(0,L,on),
+    reposition(L).
 
+reposition_loop(L,I):-
+    nth0(I,L,on),
+    percept(I),
+    I < 5,
+    C is I+1,
+    reposition_loop(L,C).
 
+reposition_loop(L,I):-
+    nth0(I,L,off),
+    I < 5,
+    C is I+1,
+    reposition_loop(L,C).
+
+reposition_loop(_,5).
+
+reposition(L):-
+    nth0(0,L,on),
+    nth0(5,L,off),
+    confundusResetPercept,
+    assertz(current(0,0,rnorth)),
+    assertz(visited(0,0)),
+    reposition_loop(L,0).
+
+reborn:-
+    confundusResetPercept,
+    assertz(iswumpusalive),
+    assertz(hasarrow),
+    assertz(coinexist).
 
 
 
