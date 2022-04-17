@@ -14,6 +14,24 @@
 :-abolish(wall/2).
 :-abolish(stench/2).
 
+abolishAll:-
+    abolish(current/3),
+    abolish(visited/2),
+    abolish(action/4),
+    abolish(safe/2),
+    abolish(wumpus/2),
+    abolish(hasarrow/0),
+    abolish(tingle/2),
+    abolish(glitter/2),
+    abolish(confundus/2),
+    abolish(explore_loop/4),
+    abolish(tree_visited/3),
+    abolish(return_loop/4),
+    abolish(arc/7),
+    abolish(wall/2),
+    abolish(stench/2).
+
+
 :- dynamic(
     [
     action/4,
@@ -351,9 +369,12 @@ explore(L):-
 
 
 confundus(X,Y):-
+    \+ visited(X,Y),
     adj(Xa,Ya,X,Y),
-    tingle(Xa,Ya),
-    \+ visited(Xa,Ya).
+    tingle(Xa,Ya).
+
+reposition(L):-
+
 
 move(A, [_,on,_,_,_,_]):-
     action(A),
