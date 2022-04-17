@@ -38,6 +38,10 @@ visited(0,1).
 
 
 % current position
+wumpus(X,Y):-
+    \+ visited(X,Y),
+    adj(Xa,Ya,X,Y),
+    stench(Xa,Ya).
 
 current(0,0,rsouth).
 
@@ -152,6 +156,16 @@ action(turnleft):-
     current(X,Y,_),
     retractall(current(_,_,_)),
     assertz(current(X,Y,D)).
+
+% shoot 
+action(shoot):-
+    hasarrow,
+    retractall(hasarrow).
+
+action(pickup):-
+    current(Xi,Yi,_),
+    glitter(Xi,Yi),
+    retract(glitter(Xi,Yi)).
 
 % explore([A|R]):-
 %     length(R,0),
@@ -335,46 +349,43 @@ explore(L):-
     return_loop(Lj,Xi,Yi,Di),
     L=Lj.
 
-wumpus(X,Y):-
-    adj(Xa,Ya,X,Y),
-    stench(Xa,Ya),
-    \+ visited(Xa,Ya).
 
 confundus(X,Y):-
     adj(Xa,Ya,X,Y),
     tingle(Xa,Ya),
     \+ visited(Xa,Ya).
 
-move(moveforward, [_,on,_,_,_,_]):-
-    action(moveforward),
+move(A, [_,on,_,_,_,_]):-
+    action(A),
     current(X,Y,_),
     stench(X,Y).
 
-move(moveforward, [_,_,on,_,_,_]):-
-    action(moveforward),
+move(A, [_,_,on,_,_,_]):-
+    action(A),
     current(X,Y,_),
     tingle(X,Y).
 
-move(moveforward,[_,_,_,on,_,_]):-
-    action(moveforward),
+move(A,[_,_,_,on,_,_]):-
+    action(A),
     current(X,Y,_),
     glitter(X,Y).
 
-move(moveforward,[_,_,_,_,on,_]):-
+move(A,[_,_,_,_,on,_]):-
     current(Xi,Yi,Di),
-    action(moveforward),
+    A == moveforward,
+    action(A),
     current(X,Y,_),
     wall(X,Y),
     retractall(current(_,_,_)),
     assertz(current(Xi,Yi,Di)).
 
-move(shoot,[_,_,_,_,_,on]):-
+move(A,[_,_,_,_,_,on]):-
+    A == shoot,
     retractall(stench(_,_,_)),
-    retractall(wumpus(_,_,_)),
-    retractall(hasarrow).
+    retractall(wumpus(_,_,_)).
 
-move(shoot,[_,_,_,_,_,off]):-
-    retractall(hasarrow).
+move(A,[off,off,off,off,off,off]):-
+    action(A).
 
 
 
