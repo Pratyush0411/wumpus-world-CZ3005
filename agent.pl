@@ -279,21 +279,6 @@ arc(A,X,Y,D,Xi,Yi,Di):-
     Y = Yi,
     D = rsouth.
 
-% adj(Xa,Ya,Xi,Yi):-
-%     Xa is Xi+1,
-%     Ya = Yi.
-
-% adj(Xa,Ya,Xi,Yi):-
-%     Xa is Xi-1,
-%     Ya = Yi.
-
-% adj(Xa,Ya,Xi,Yi):-
-%     Xa = Xi,
-%     Ya is Yi+1.
-
-% adj(Xa,Ya,Xi,Yi):-
-%     Xa = Xi,
-%     Ya is Yi-1.
 
 adj(Xa,Ya,Xi,Yi):-
     Xi = Xa,
@@ -384,26 +369,54 @@ confundusResetPercept:-
     retractall(wall(_,_)),
     retractall(stench(_,_)).
 
+updateStench(X,Y):-
+    \+ stench(X,Y),
+    assertz(stench(X,Y)).
+
+updateStench(X,Y):-
+    stench(X,Y).
+
+updateTingle(X,Y):-
+    \+ tingle(X,Y),
+    assertz(tingle(X,Y)).
+
+updateTingle(X,Y):-
+    tingle(X,Y).
+
+updateGlitter(X,Y):-
+    \+ glitter(X,Y),
+    assertz(glitter(X,Y)).
+
+updateGlitter(X,Y):-
+    glitter(X,Y).
+
+updateWall(X,Y):-
+    \+ wall(X,Y),
+    assertz(wall(X,Y)).
+
+updateWall(X,Y):-
+    wall(X,Y).
+
 percept(0).
 percept(I):-
     I == 1,
     current(X,Y,_),
-    assertz(stench(X,Y)).
+    updateStench(X,Y).
 
 percept(I):-
     I == 2,
     current(X,Y,_),
-    assertz(tingle(X,Y)).
+    updateTingle(X,Y).
 
 percept(I):-
     I == 3,
     current(X,Y,_),
-    assertz(glitter(X,Y)).
+    updateGlitter(X,Y).
 
 percept(I):-
     I == 4,
     current(X,Y,_),
-    assertz(wall(X,Y)).
+    updateWall(X,Y).
 
 percept(I):-
     I == 5,
