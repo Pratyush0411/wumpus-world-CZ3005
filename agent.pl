@@ -410,7 +410,6 @@ percept(I):-
 percept(I):-
     I == 5,
     retractall(stench(_,_)),
-    retractall(wumpus(_,_)),
     retractall(iswumpusalive).
 
 move_loop(L,I):-
