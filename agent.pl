@@ -80,11 +80,10 @@ coinexist:-
 
 % Safe position
 
-safe(0,0).
+% safe(0,0).
 safe(X,Y):-
     \+ wumpus(X,Y),
-    \+ confundus(X,Y),
-    !.
+    \+ confundus(X,Y).
 
 % Get position
 getmoveforwardpos(X,Y):-
@@ -379,7 +378,6 @@ confundus(X,Y):-
 confundusResetPercept:-
     retractall(current(_,_,_)),
     retractall(visited(_,_)),
-    retractall(safe(_,_)),
     retractall(tingle(_,_)),
     retractall(glitter(_,_)),
     retractall(tree_visited(_,_,_)),
