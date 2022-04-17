@@ -1,15 +1,18 @@
 :-abolish(current/3).
 :-abolish(visited/2).
-:-abolish(action/1).
+:-abolish(action/4).
 :-abolish(safe/2).
 :-abolish(wumpus/2).
-:-abolish(dummycurrent/3).
 :-abolish(hasarrow/0).
 :-abolish(tingle/2).
 :-abolish(glitter/2).
 :-abolish(confundus/2).
 :-abolish(explore_loop/4).
 :-abolish(tree_visited/3).
+:-abolish(return_loop/4).
+:-abolish(arc/7).
+:-abolish(wall/2).
+:-abolish(stench/2).
 
 :- dynamic(
     [
@@ -22,8 +25,10 @@
     glitter/2,
     confundus/2,
     wumpus/2,
-    dummycurrent/3,
-    tree_visited/3
+    tree_visited/3,
+    arc/7,
+    wall/2,
+    stench/2
     ]
 ).
 
@@ -35,9 +40,6 @@ visited(0,1).
 % current position
 
 current(0,0,rsouth).
-
-% dummy current position
-dummycurrent(0,0,rsouth).
 
 % has arrow
 hasarrow:-
@@ -52,29 +54,29 @@ safe(X,Y):-
     !.
 
 % Get position
-getforwardpos(X,Y):-
+getmoveforwardpos(X,Y):-
     dummycurrent(Xi,Yi,Di),
     Di==rnorth,
     X = Xi,
     Y is Yi+1,
     !.
 
-getforwardpos(X,Y):-
-    dummycurrent(Xi,Yi,Di),
+getmoveforwardpos(X,Y):-
+    current(Xi,Yi,Di),
     Di==rsouth,
     X = Xi,
     Y is Yi-1,
     !.
 
-getforwardpos(X,Y):-
-    dummycurrent(Xi,Yi,Di),
+getmoveforwardpos(X,Y):-
+    current(Xi,Yi,Di),
     Di==reast,
     X is Xi+1,
     Y = Yi,
     !.
 
-getforwardpos(X,Y):-
-    dummycurrent(Xi,Yi,Di),
+getmoveforwardpos(X,Y):-
+    current(Xi,Yi,Di),
     Di==rwest,
     X is Xi-1,
     Y = Yi,
@@ -82,101 +84,74 @@ getforwardpos(X,Y):-
 
 % Get Direction
 getrightdir(D):-
-    dummycurrent(_,_,Di),
+    current(_,_,Di),
     Di == rnorth,
     D = reast,
     !.
 
 getrightdir(D):-
-    dummycurrent(_,_,Di),
+    current(_,_,Di),
     Di == reast,
     D = rsouth,
     !.
 
 getrightdir(D):-
-    dummycurrent(_,_,Di),
+    current(_,_,Di),
     Di == rsouth,
     D = rwest,
     !.
 
 getrightdir(D):-
-    dummycurrent(_,_,Di),
+    current(_,_,Di),
     Di == rwest,
     D = rnorth,
     !.
 
 getleftdir(D):-
-    dummycurrent(_,_,Di),
+    current(_,_,Di),
     Di == rnorth,
     D = rwest,
     !.
 
 getleftdir(D):-
-    dummycurrent(_,_,Di),
+    current(_,_,Di),
     Di == rwest,
     D = rsouth,
     !.
 
 getleftdir(D):-
-    dummycurrent(_,_,Di),
+    current(_,_,Di),
     Di == rsouth,
     D = reast,
     !.
 
 getleftdir(D):-
-    dummycurrent(_,_,Di),
+    current(_,_,Di),
     Di == reast,
     D = rnorth,
     !.
 
-%change direction
-changedir(D):-
-    current(X,Y,_),
-    retractall(current(_,_,_)),
-    assertz(current(X,Y,D)),
-    !.
-
-changedummydir(D):-
-    dummycurrent(X,Y,_),
-    retractall(dummycurrent(_,_,_)),
-    assertz(dummycurrent(X,Y,D)),
-    !.
-
-% change position
-changepos(X,Y):-
+% move moveforward
+action(moveforward):-
+    getmoveforwardpos(X,Y),
     current(_,_,D),
     retractall(current(_,_,_)),
     assertz(current(X,Y,D)),
-    assertz(visited(X,Y)),
-    !.
-
-% change dummy position
-changedummypos(X,Y):-
-    dummycurrent(_,_,D),
-    retractall(dummycurrent(_,_,_)),
-    assertz(dummycurrent(X,Y,D)),
-    !.
-
-% move forward
-action(forward,X,Y,D):-
-    getforwardpos(X,Y),
-    dummycurrent(_,_,D).
+    assertz(visited(X,Y)).
 
 % turn right
-action(turnright,X,Y,D):-
+action(turnright):-
     getrightdir(D),
-    dummycurrent(X,Y,_).
+    current(X,Y,_),
+    retractall(current(_,_,_)),
+    assertz(current(X,Y,D)).
 
 %turn left
-action(turnleft,X,Y,D):-
+action(turnleft):-
     getleftdir(D),
-    dummycurrent(X,Y,_).
-
-resetdummy:-
-    current(X,Y,D),
-    retractall(dummycurrent(_,_,_)),
-    assertz(dummycurrent(X,Y,D)).
-
+    current(X,Y,_),
+    retractall(current(_,_,_)),
+    assertz(current(X,Y,D)).
 
 % explore([A|R]):-
 %     length(R,0),
@@ -205,28 +180,28 @@ resetdummy:-
 
 arc(A,X,Y,D,Xi,Yi,Di):-
     Di == rnorth,
-    A == forward,
+    A == moveforward,
     X = Xi,
     Y is Yi+1,
     D = Di.
 
 arc(A,X,Y,D,Xi,Yi,Di):-
     Di == rsouth,
-    A == forward,
+    A == moveforward,
     X = Xi,
     Y is Yi-1,
     D = Di.
 
 arc(A,X,Y,D,Xi,Yi,Di):-
     Di == rwest,
-    A == forward,
+    A == moveforward,
     X is Xi-1,
     Y = Yi,
     D = Di.
 
 arc(A,X,Y,D,Xi,Yi,Di):-
     Di == reast,
-    A == forward,
+    A == moveforward,
     X is Xi+1,
     Y = Yi,
     D = Di.
@@ -287,10 +262,25 @@ arc(A,X,Y,D,Xi,Yi,Di):-
     Y = Yi,
     D = rsouth.
 
+adj(Xa,Ya,Xi,Yi):-
+    Xa is Xi+1,
+    Ya = Yi.
+
+adj(Xa,Ya,Xi,Yi):-
+    Xa is Xi-1,
+    Ya = Yi.
+
+adj(Xa,Ya,Xi,Yi):-
+    Xa = Xi,
+    Ya is Yi+1.
+
+adj(Xa,Ya,Xi,Yi):-
+    Xa = Xi,
+    Ya is Yi-1.
 
 explore_loop(L,Xi,Yi,Di):-
     assertz(tree_visited(Xi,Yi,Di)),
-    member(A,[forward,turnright,turnleft]),
+    member(A,[moveforward,turnright,turnleft]),
     arc(A,X,Y,D,Xi,Yi,Di),
     safe(X,Y),
     \+ tree_visited(X,Y,D),
@@ -299,17 +289,18 @@ explore_loop(L,Xi,Yi,Di):-
 
 explore_loop(L,Xi,Yi,Di):-
     assertz(tree_visited(Xi,Yi,Di)),
-    member(A,[forward,turnright,turnleft]),
+    member(A,[moveforward,turnright,turnleft]),
     arc(A,X,Y,D,Xi,Yi,Di),
     safe(X,Y),
     visited(X,Y),
     \+ tree_visited(X,Y,D),
+    \+ wall(X,Y),
     explore_loop(Lr,X,Y,D),
     append([A],Lr,L).
 
 return_loop(L,Xi,Yi,Di):-
     assertz(tree_visited(Xi,Yi,Di)),
-    member(A,[forward,turnright,turnleft]),
+    member(A,[moveforward,turnright,turnleft]),
     arc(A,X,Y,D,Xi,Yi,Di),
     safe(X,Y),
     \+ tree_visited(X,Y,D),
@@ -320,7 +311,7 @@ return_loop(L,Xi,Yi,Di):-
 
 return_loop(L,Xi,Yi,Di):-
     assertz(tree_visited(Xi,Yi,Di)),
-    member(A,[forward,turnright,turnleft]),
+    member(A,[moveforward,turnright,turnleft]),
     arc(A,X,Y,D,Xi,Yi,Di),
     safe(X,Y),
     \+ tree_visited(X,Y,D),
@@ -343,6 +334,59 @@ explore(L):-
     retractall(tree_visited(_,_,_)),
     return_loop(Lj,Xi,Yi,Di),
     L=Lj.
+
+wumpus(X,Y):-
+    adj(Xa,Ya,X,Y),
+    stench(Xa,Ya),
+    \+ visited(Xa,Ya).
+
+confundus(X,Y):-
+    adj(Xa,Ya,X,Y),
+    tingle(Xa,Ya),
+    \+ visited(Xa,Ya).
+
+move(moveforward, [_,on,_,_,_,_]):-
+    action(moveforward),
+    current(X,Y,_),
+    stench(X,Y).
+
+move(moveforward, [_,_,on,_,_,_]):-
+    action(moveforward),
+    current(X,Y,_),
+    tingle(X,Y).
+
+move(moveforward,[_,_,_,on,_,_]):-
+    action(moveforward),
+    current(X,Y,_),
+    glitter(X,Y).
+
+move(moveforward,[_,_,_,_,on,_]):-
+    current(Xi,Yi,Di),
+    action(moveforward),
+    current(X,Y,_),
+    wall(X,Y),
+    retractall(current(_,_,_)),
+    assertz(current(Xi,Yi,Di)).
+
+move(shoot,[_,_,_,_,_,on]):-
+    retractall(stench(_,_,_)),
+    retractall(wumpus(_,_,_)),
+    retractall(hasarrow).
+
+move(shoot,[_,_,_,_,_,off]):-
+    retractall(hasarrow).
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
