@@ -1,5 +1,7 @@
-from matplotlib import offsetbox
 from pyswip import Prolog
+from pyswip import Functor, Variable, Query
+
+assertz = Functor("assertz", 2)
 
 
 class Driver:
@@ -129,7 +131,7 @@ class Driver:
         self.bump = False
         self.scream = False
         self.confunded = True
-        self.agent_abs_pos = [4, 3, 'rnorth']  # make it random
+        self.agent_abs_pos = [5, 2, 'rnorth']  # make it random
         self.relative_map = \
             [
                 [self.get_cell('nothing'), self.get_cell(
@@ -289,63 +291,57 @@ class Driver:
                 self.relative_map[i][j] = self.get_cell(
                     X, _1, _2, _3, _4, _6, _7, _8, _9)
 
-        self.print_map(self.relative_map)
+        # self.print_map(self.relative_map)
 
     def move_agent(self, agent_location, action, abs=True):
-        try:
+        print('agent location = ', agent_location)
+        print('abs = ', abs)
+        if action == 'shoot':
+            self.scream = True
 
-            if action == 'moveforward':
-                if agent_location[2] == 'rnorth':
-                    if (agent_location[1] + 1 < len(self.map) and abs and (self.map[agent_location[0]][agent_location[1] + 1] == self.wall)).all():
-                        self.bump = True
-                    else:
-                        agent_location[1] += 1
+        if action == 'moveforward':
+            if agent_location[2] == 'rnorth':
+                if agent_location[1] + 1 < len(self.map[0]) and abs and self.map[agent_location[0]][agent_location[1] + 1] == self.wall:
+                    self.bump = True
+                else:
+                    agent_location[1] += 1
+            elif agent_location[2] == 'rsouth':
+                if (agent_location[1] - 1 >= 0 and abs and self.map[agent_location[0]][agent_location[1] - 1] == self.wall):
+                    self.bump = True
+                else:
+                    agent_location[1] -= 1
 
-                if action == 'shoot':
-                    self.scream = True
+            elif agent_location[2] == 'reast':
+                if (agent_location[0]+1 < len(self.map[0]) and abs and self.map[agent_location[0]+1][agent_location[1]] == self.wall):
+                    self.bump = True
+                else:
+                    agent_location[0] += 1
 
-                elif agent_location[2] == 'rsouth':
-                    if (agent_location[1] - 1 >= 0 and abs and (self.map[agent_location[0]][agent_location[1] - 1] == self.wall).all()):
-                        self.bump = True
-                    else:
-                        agent_location[1] -= 1
+            elif agent_location[2] == 'rwest':
+                if (agent_location[0]+1 >= 0 and abs and self.map[agent_location[0]-1][agent_location[1]] == self.wall):
+                    self.bump = True
+                else:
+                    agent_location[0] -= 1
 
-                elif agent_location[2] == 'reast':
-                    if (agent_location[0]+1 < len(self.map) and abs and (self.map[agent_location[0]+1][agent_location[1]] == self.wall).all()):
-                        self.bump = True
-                    else:
-                        agent_location[0] += 1
+        elif action == 'turnright':
+            if agent_location[2] == 'rnorth':
+                agent_location[2] = 'reast'
+            elif agent_location[2] == 'reast':
+                agent_location[2] = 'rsouth'
+            elif agent_location[2] == 'rsouth':
+                agent_location[2] = 'rwest'
+            elif agent_location[2] == 'rwest':
+                agent_location[2] = 'rnorth'
 
-                elif agent_location[2] == 'rwest':
-                    if (agent_location[0]+1 >= 0 and abs and (self.map[agent_location[0]-1][agent_location[1]] == self.wall).all()):
-                        self.bump = True
-                    else:
-                        agent_location[0] -= 1
-
-            elif action == 'turnright':
-                if agent_location[2] == 'rnorth':
-                    agent_location[2] = 'reast'
-                elif agent_location[2] == 'reast':
-                    agent_location[2] = 'rsouth'
-                elif agent_location[2] == 'rsouth':
-                    agent_location[2] = 'rwest'
-                elif agent_location[2] == 'rwest':
-                    agent_location[2] = 'rnorth'
-
-            elif action == 'turnleft':
-                if agent_location[2] == 'rnorth':
-                    agent_location[2] = 'rwest'
-                elif agent_location[2] == 'reast':
-                    agent_location[2] = 'rnorth'
-                elif agent_location[2] == 'rsouth':
-                    agent_location[2] = 'reast'
-                elif agent_location[2] == 'rwest':
-                    agent_location[2] = 'rsouth'
-
-        except:
-            print('exception------')
-            print('abs map len:', len(self.map))
-            print('agent = ', agent_location)
+        elif action == 'turnleft':
+            if agent_location[2] == 'rnorth':
+                agent_location[2] = 'rwest'
+            elif agent_location[2] == 'reast':
+                agent_location[2] = 'rnorth'
+            elif agent_location[2] == 'rsouth':
+                agent_location[2] = 'reast'
+            elif agent_location[2] == 'rwest':
+                agent_location[2] = 'rsouth'
 
         return agent_location
 
@@ -355,13 +351,25 @@ class Driver:
         prolog = Prolog()
         prolog.consult("agent.pl")
         returned = False
+        percepts, percepts_arr = self.get_percepts(
+            self.agent_abs_pos[0], self.agent_abs_pos[1])
+        percepts_arr[0] = "on"
+        print(percepts_arr)
+        print(bool(prolog.query(f"reposition({percepts_arr}).")))
+        print(list(prolog.query("current(X,Y,D)")))
+        turn = 0
+        explore = True
+        while(not returned and explore):
+            if turn > 2:
+                break
+            turn += 1
 
-        while(not returned):
-            print(self.map[4][3][0])
+            if not bool(prolog.query("explore(L)")):
+                explore = False
 
             seq_actions = list(prolog.query("explore(L)"))
             seq_actions = seq_actions[0]['L']
-
+            print(seq_actions)
             for act in seq_actions:
                 self.update_relative_map(act, prolog)
                 print(act, end='')
@@ -371,12 +379,13 @@ class Driver:
                 percepts, percepts_arr = self.get_percepts(
                     self.agent_abs_pos[0], self.agent_abs_pos[1])
                 prolog.query(f"move({act},{percepts_arr})")
-                self.print_map(self.relative_map)
+                print('percepts array', percepts_arr)
+                # self.print_map(self.relative_map)
                 if (percepts_arr[3] == 'on'):
                     percepts, percepts_arr = self.get_percepts(
                         self.agent_abs_pos[0], self.agent_abs_pos[1])
                     prolog.query(f"move(pickup, {percepts_arr})")
-                    self.print_map(self.relative_map)
+                    # self.print_map(self.relative_map)
                 print()
             print(percepts)
 
@@ -385,13 +394,15 @@ class Driver:
 
 
 print()
-while (True):
+i = 1
+while (i < 3):
 
     print('---------WELCOME TO WUMPUS WORLD------')
     print('Select an option from the following: ')
     print('1. Start Game')
     print('2. View Absolute Vodka')
     print('3. Exit Game')
+    i += 1
     opt = int(input())
     d = Driver()
     if opt == 1:
