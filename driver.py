@@ -1,5 +1,6 @@
 from pyswip import Prolog
 from pyswip import Functor, Variable, Query
+from regex import W
 
 assertz = Functor("assertz", 2)
 
@@ -7,7 +8,10 @@ assertz = Functor("assertz", 2)
 class Driver:
 
     def __init__(self):
-
+        self.bump = False
+        self.scream = False
+        self.confunded = True
+        self.agent_abs_pos = [5, 2, 'rnorth']  # make it random
         self.abbr = {
             'containsWumpus': 'W',
             'containsPortal': 'O',
@@ -77,7 +81,6 @@ class Driver:
     def get_percepts(self, x, y):
         percepts_arr = []
         percepts = ""
-        print('x,y=', x, y)
         if self.bump:
             cell = self.wall
         else:
@@ -111,14 +114,14 @@ class Driver:
             percepts += "G-"
             percepts_arr.append("off")
 
-        if self.bump or cell[2][1] == '#' or cell[2][1] == 'B':
+        if self.bump:
             percepts += "Bump-"
             percepts_arr.append("on")
         else:
             percepts += "B-"
             percepts_arr.append("off")
 
-        if self.scream or cell[2][2] == '@':
+        if self.scream:
             percepts += "Scream-"
             percepts_arr.append("on")
         else:
@@ -127,33 +130,41 @@ class Driver:
 
         return percepts, percepts_arr
 
-    def reposition_agent(self):
+    def reposition_agent(self, current):
         self.bump = False
         self.scream = False
         self.confunded = True
         self.agent_abs_pos = [5, 2, 'rnorth']  # make it random
+        self.agent_relative = [
+            (current[0]['X'], current[0]['Y']), current[0]['D']]
+        if self.agent_relative[1] == 'rnorth':
+            dir = 'faceNorth'
+        elif self.agent_relative[1] == 'rwest':
+            dir = 'faceWest'
+        elif self.agent_relative[1] == 'rsouth':
+            dir = 'faceSouth'
+        elif self.agent_relative[1] == 'reast':
+            dir = 'faceEast'
         self.relative_map = \
             [
                 [self.get_cell('nothing'), self.get_cell(
                     'nothing'), self.get_cell('nothing')],
                 [self.get_cell('nothing'), self.get_cell(
-                    'faceSouth', _6='agent'), self.get_cell('nothing')],
+                    dir, _6='agent'), self.get_cell('nothing')],
                 [self.get_cell('nothing'), self.get_cell(
                     'nothing'), self.get_cell('nothing')]
             ]
-        self.agent_relative = [
-            len(self.relative_map)//2, len(self.relative_map)//2, 'rnorth']
-        self.delta = [self.agent_relative[0] - self.agent_abs_pos[0],
-                      self.agent_relative[1] - self.agent_abs_pos[1]]
+
+        # self.delta = [self.agent_relative[0] - self.agent_abs_pos[0],
+        #               self.agent_relative[1] - self.agent_abs_pos[1]]
 
     def map_origin(self):
         sane_map = {}
         i = 0
         j = 0
-        print('len:', len(self.relative_map))
 
-        n = len(self.relative_map)//2 - 1
-        print('n:', n)
+        n = len(self.relative_map)//2
+
         r = n
         c = -n
         while r >= -n:
@@ -170,12 +181,15 @@ class Driver:
         return sane_map
 
     def update_relative_map(self, act, prolog):
-
-        if act == 'moveforward':
+        n = len(self.relative_map)
+        if act == 'moveforward' and not self.bump:
+            for i in range(n):
+                self.relative_map[i].insert(0, self.get_cell('nothing'))
+                self.relative_map[i].append(self.get_cell('nothing'))
             self.relative_map.append(
-                [self.get_cell('nothing')]*(len(self.relative_map)+2))
+                [self.get_cell('nothing')]*(n+2))
             self.relative_map.insert(
-                0, [self.get_cell('nothing')]*(len(self.relative_map)+2))
+                0, [self.get_cell('nothing')]*(n+2))
 
         wumpus = list(prolog.query("wumpus(X,Y)"))
         confundus = list(prolog.query("confundus(X,Y)"))
@@ -189,8 +203,13 @@ class Driver:
         map = self.map_origin()
         self.agent_relative = (
             map[(agent[0]['X'], agent[0]['Y'])], agent[0]['D'])
-        print(self.agent_relative)
-        print(wumpus, confundus, glitter, stench, agent, visited_safe)
+        print("wumpus, confundus, glitter, stench, agent, visited_safe")
+        print("wumpus at: ", wumpus)
+        print("confundus at:", confundus)
+        print("glitter at", glitter)
+        print("stench ", stench)
+        print("agent ", agent)
+        print("visited_safe", visited_safe)
         map = self.map_origin()
 
         wumpus_at = []
@@ -210,6 +229,7 @@ class Driver:
             stench_at.append(map[(point['X'], point['Y'])])
 
         visited_at = []
+
         for point in visited_safe:
             visited_at.append(map[(point['X'], point['Y'])])
 
@@ -228,9 +248,14 @@ class Driver:
                     continue
 
                 X = 'nothing'
+
+                if (i, j) in visited_at:
+                    X = 'visitedSafe'
+                # else:
+                #     X = 'nonVisitedSafe'
                 if (i, j) in confundus_at:
-                    _1 = 'confounded'
-                    X = 'conatinsPortal'
+                    _1 = 'confunded'
+                    X = 'containsPortal'
                 else:
                     _1 = 'notConfunded'
 
@@ -244,7 +269,7 @@ class Driver:
                 else:
                     _3 = 'notTingle'
 
-                if (i, j) in wumpus_at or (i, j) == self.agent_relative:
+                if (i, j) in wumpus_at or (i, j) == self.agent_relative[0]:
                     _4 = 'agent'
 
                     if (i, j) in wumpus_at:
@@ -252,9 +277,8 @@ class Driver:
                             X = 'wumpusAndPortal'
                         else:
                             X = 'wumpus'
-                    if (i, j) == self.agent_relative:
-                        print('agent_relative = ', self.agent_relative)
-                        D = self.agent_relative[2]
+                    if (i, j) == self.agent_relative[0]:
+                        D = self.agent_relative[1]
                         if D == 'rnorth':
                             X = 'faceNorth'
                         elif D == 'reast':
@@ -278,7 +302,7 @@ class Driver:
                 else:
                     _7 = 'noGlitter'
 
-                if self.bump:
+                if self.bump and (i, j) == self.agent_relative[0]:
                     _8 = 'bumpOn'
                 else:
                     _8 = 'bumpOff'
@@ -291,13 +315,16 @@ class Driver:
                 self.relative_map[i][j] = self.get_cell(
                     X, _1, _2, _3, _4, _6, _7, _8, _9)
 
-        # self.print_map(self.relative_map)
-
     def move_agent(self, agent_location, action, abs=True):
-        print('agent location = ', agent_location)
-        print('abs = ', abs)
+
         if action == 'shoot':
             self.scream = True
+
+        if action != 'shoot':
+            self.scream = False
+
+        if action != 'moveforward':
+            self.bump = False
 
         if action == 'moveforward':
             if agent_location[2] == 'rnorth':
@@ -346,21 +373,22 @@ class Driver:
         return agent_location
 
     def run_agent(self):
-        self.reposition_agent()
-        print("reposition successful")
+
         prolog = Prolog()
         prolog.consult("agent.pl")
         returned = False
         percepts, percepts_arr = self.get_percepts(
             self.agent_abs_pos[0], self.agent_abs_pos[1])
         percepts_arr[0] = "on"
-        print(percepts_arr)
-        print(bool(prolog.query(f"reposition({percepts_arr}).")))
-        print(list(prolog.query("current(X,Y,D)")))
+        list(prolog.query(f"reposition({percepts_arr})"))
+        current = list(prolog.query('current(X,Y,D)'))
+        self.reposition_agent(current)
+        print("reposition successful")
+        self.print_map(self.relative_map)
         turn = 0
         explore = True
         while(not returned and explore):
-            if turn > 2:
+            if turn > 5:
                 break
             turn += 1
 
@@ -370,22 +398,27 @@ class Driver:
             seq_actions = list(prolog.query("explore(L)"))
             seq_actions = seq_actions[0]['L']
             print(seq_actions)
+
             for act in seq_actions:
-                self.update_relative_map(act, prolog)
-                print(act, end='')
+
+                print(act, end=' ')
                 self.agent_abs_pos = self.move_agent(self.agent_abs_pos, act)
-                self.agent_relative = self.move_agent(
-                    self.agent_abs_pos, act, abs=False)
                 percepts, percepts_arr = self.get_percepts(
                     self.agent_abs_pos[0], self.agent_abs_pos[1])
-                prolog.query(f"move({act},{percepts_arr})")
+                print(f"executing action {act}")
                 print('percepts array', percepts_arr)
-                # self.print_map(self.relative_map)
+                list(prolog.query(f"move({act},{percepts_arr})"))
+
                 if (percepts_arr[3] == 'on'):
                     percepts, percepts_arr = self.get_percepts(
                         self.agent_abs_pos[0], self.agent_abs_pos[1])
-                    prolog.query(f"move(pickup, {percepts_arr})")
-                    # self.print_map(self.relative_map)
+                    print(f"executing action pickup")
+                    list(prolog.query(f"move(pickup, {percepts_arr})"))
+
+                self.update_relative_map(act, prolog)
+                self.print_map(self.relative_map)
+                if(self.bump):
+                    self.bump = False
                 print()
             print(percepts)
 
