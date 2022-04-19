@@ -16,6 +16,7 @@
 :-abolish(coinexist/0).
 :-abolish(iswumpusalive/0).
 :-abolish(adj/4).
+:-abolish(havesol/0).
 
 % abolishAll:-
 %     abolish(current/3),
@@ -54,7 +55,8 @@
     stench/2,
     adj/4,
     iswumpusalive/0,
-    coinexist/0
+    coinexist/0,
+    havesol/0
     ]
 ).
 
@@ -71,6 +73,8 @@ wumpus(X,Y):-
 
 current(0,0,rsouth).
 
+havesol:-
+    true.
 % has arrow
 hasarrow:-
     true.
@@ -334,6 +338,9 @@ return_loop(L,Xi,Yi,Di):-
     arc(A,X,Y,D,Xi,Yi,Di),
     safe(X,Y),
     \+ tree_visited(X,Y,D),
+    visited(X,Y),
+    (X\==0;
+    Y\==0),
     return_loop(Lr,X,Y,D),
     append([A],Lr,L).
 
@@ -350,6 +357,7 @@ explore(L):-
     retractall(tree_visited(_,_,_)),
     current(Xi,Yi,Di),
     \+ explore_loop(_,Xi,Yi,Di),
+    retractall(havesol),
     retractall(tree_visited(_,_,_)),
     return_loop(Lj,Xi,Yi,Di),
     L=Lj.
