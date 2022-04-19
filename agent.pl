@@ -345,6 +345,19 @@ return_loop(L,Xi,Yi,Di):-
     return_loop(Lr,X,Y,D),
     append([A],Lr,L).
 
+return_loop(L,Xi,Yi,Di):-
+    assertz(tree_visited(Xi,Yi,Di)),
+    member(A,[moveforward,turnright,turnleft]),
+    arc(A,X,Y,D,Xi,Yi,Di),
+    safe(X,Y),
+    \+ tree_visited(X,Y,D),
+    visited(X,Y),
+    X==0,
+    Y==0,
+    D \== rnorth,
+    return_loop(Lr,X,Y,D),
+    append([A],Lr,L).
+
 
 explore(L):-
 
