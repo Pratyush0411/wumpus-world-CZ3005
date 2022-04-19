@@ -341,6 +341,7 @@ return_loop(L,Xi,Yi,Di):-
     visited(X,Y),
     (X\==0;
     Y\==0),
+    \+ wall(X,Y),
     return_loop(Lr,X,Y,D),
     append([A],Lr,L).
 
