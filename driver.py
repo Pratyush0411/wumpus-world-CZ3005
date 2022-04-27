@@ -1,3 +1,4 @@
+import sys
 from pyswip import Prolog
 from pyswip import Functor, Variable, Query
 from regex import W
@@ -8,6 +9,7 @@ assertz = Functor("assertz", 2)
 class Driver:
 
     def __init__(self):
+        self.dead = False
         self.bump = False
         self.scream = False
         self.confunded = True
@@ -149,12 +151,11 @@ class Driver:
             [
                 [self.get_cell('nothing'), self.get_cell(
                     'nothing'), self.get_cell('nothing')],
-                [self.get_cell('nothing'), self.get_cell(dir, _1='confunded',
+                [self.get_cell('nothing'), self.get_cell(dir, _1='confunded', _4='agent',
                                                          _6='agent'), self.get_cell('nothing')],
                 [self.get_cell('nothing'), self.get_cell(
                     'nothing'), self.get_cell('nothing')]
             ]
-
         # self.delta = [self.agent_relative[0] - self.agent_abs_pos[0],
         #               self.agent_relative[1] - self.agent_abs_pos[1]]
 
@@ -180,7 +181,11 @@ class Driver:
 
         return sane_map
 
-    def update_relative_map(self, last, act, prolog):
+    def get_adj(self, x, y):
+        adj_list = [(x+1, y), (x, y+1), (x-1, y), (x, y-1)]
+        return adj_list
+
+    def update_relative_map(self, last, prolog):
         n = len(self.relative_map)
         if last and not self.bump:
             for i in range(n):
@@ -203,13 +208,17 @@ class Driver:
         map = self.map_origin()
         self.agent_relative = (
             map[(agent[0]['X'], agent[0]['Y'])], agent[0]['D'])
-        print("wumpus, confundus, glitter, stench, agent, visited_safe")
-        print("wumpus at: ", wumpus)
-        print("confundus at:", confundus)
-        print("glitter at", glitter)
-        print("stench ", stench)
-        print("agent ", agent)
-        print("visited_safe", visited_safe)
+        # print("wumpus, confundus, glitter, stench, agent, visited_safe")
+        # print()
+        # print("visited(X,Y)", visited_safe)
+        # print("wumpus(X,Y): ", wumpus)
+        # print("confundus(X,Y):", confundus)
+        # print("tingle(X,Y): ", tingle)
+        # print("glitter(X,Y): ", glitter)
+        # print("stench(X,Y): ", stench)
+        print("agent relative position: ", agent)
+        # print("wall(X,Y): ", wall)
+        # print()
         map = self.map_origin()
 
         wumpus_at = []
@@ -241,6 +250,19 @@ class Driver:
         for point in tingle:
             tingle_at.append(map[(point['X'], point['Y'])])
 
+        if self.reposition_agent in wumpus_at:
+            self.dead = True
+
+        if self.reposition_agent in confundus_at:
+            self.confunded = True
+
+        unvisited_safe = []
+        for node in visited_safe:
+            adj_list = self.get_adj(node['X'], node['Y'])
+            for neighbour in adj_list:
+                if bool(prolog.query(f"safe({neighbour[0]},{neighbour[1]})")) and neighbour not in unvisited_safe and neighbour not in visited_at:
+                    unvisited_safe.append(map[neighbour])
+
         for i in range(len(self.relative_map)):
             for j in range((len(self.relative_map[i]))):
                 if (i, j) in wall_at:
@@ -251,8 +273,10 @@ class Driver:
 
                 if (i, j) in visited_at:
                     X = 'visitedSafe'
-                else:
+
+                elif (i, j) in unvisited_safe:
                     X = 'nonVisitedSafe'
+
                 if self.confunded:
                     _1 = 'confunded'
                 else:
@@ -334,8 +358,6 @@ class Driver:
                 if agent_location[0] + 1 < len(self.map) and abs and self.map[agent_location[0] + 1][agent_location[1]] == self.wall:
                     self.bump = True
                 else:
-                    print("Moving agent: dbg 1")
-                    print(self.map[agent_location[0] + 1][agent_location[1]])
                     agent_location[0] += 1
 
             elif agent_location[2] == 'rnorth':
@@ -382,41 +404,51 @@ class Driver:
 
         prolog = Prolog()
         prolog.consult("agent.pl")
+        # Reborn agent
+        list(prolog.query("reborn"))
+
+        # has agent returned to original position
         returned = False
+
+        # confundus is turned on at the start of the game
         percepts, percepts_arr = self.get_percepts(
             self.agent_abs_pos[0], self.agent_abs_pos[1])
         percepts_arr[0] = "on"
+
+        # call reposition function
         list(prolog.query(f"reposition({percepts_arr})"))
         current = list(prolog.query('current(X,Y,D)'))
         self.reposition_agent(current)
-        print("reposition successful")
         self.print_map(self.relative_map)
         explore = True
+
         while(not returned and explore):
-            print("----exploe----", bool(prolog.query("explore(L)")))
 
             if not bool(prolog.query("explore(L)")):
                 explore = False
                 break
 
             seq_actions = list(prolog.query("explore(L)"))
-            print(seq_actions)
             if (len(seq_actions) == 0):
                 break
             seq_actions = seq_actions[0]['L']
-            print(seq_actions)
+            print('The sequence of actions is: ')
+            for a in range(len(seq_actions)):
+                if a != len(seq_actions) - 1:
+                    print(seq_actions[a], end=', ')
+                else:
+                    print(seq_actions[a])
 
+            print()
             i = -1
             last = False
 
             for act in seq_actions:
                 i += 1
-                print(act, end=' ')
                 self.agent_abs_pos = self.move_agent(self.agent_abs_pos, act)
                 percepts, percepts_arr = self.get_percepts(
                     self.agent_abs_pos[0], self.agent_abs_pos[1])
-                print(f"executing action {act}")
-                print('percepts array', percepts_arr)
+                print(f"Executing action: {act}")
                 list(prolog.query(f"move({act},{percepts_arr})"))
 
                 if i == len(seq_actions)-1:
@@ -424,12 +456,22 @@ class Driver:
                 if (percepts_arr[3] == 'on'):
                     percepts, percepts_arr = self.get_percepts(
                         self.agent_abs_pos[0], self.agent_abs_pos[1])
-                    print(f"executing action pickup")
+                    print(f"Executing action: pickup")
                     list(prolog.query(f"move(pickup, {percepts_arr})"))
 
-                self.update_relative_map(last, act, prolog)
-                print(percepts)
-                print('abs pos: ', self.agent_abs_pos)
+                # check if agent met wumpus and take required actions
+                if self.dead:
+                    self.run_agent()
+
+                if self.confunded:
+                    # call reposition function
+                    list(prolog.query(f"reposition({percepts_arr})"))
+                    current = list(prolog.query('current(X,Y,D)'))
+                    self.reposition_agent(current)
+                    print("reposition successful")
+
+                self.update_relative_map(last, prolog)
+                print('Percepts: ', percepts)
                 self.print_map(self.relative_map)
                 if(self.bump):
                     self.bump = False
@@ -440,21 +482,24 @@ class Driver:
 
 
 print()
-i = 1
-while (i < 3):
+
+while (True):
 
     print('---------WELCOME TO WUMPUS WORLD------')
     print('Select an option from the following: ')
     print('1. Start Game')
-    print('2. View Absolute Vodka')
+    print('2. View Absolute Map')
     print('3. Exit Game')
-    i += 1
     opt = int(input())
     d = Driver()
     if opt == 1:
+        print('------------- ABSOLUTE MAP ------------------')
+        d.print_map(d.map)
+        print('-------------- GAME BEGINS ------------------')
         d.run_agent()
 
     elif opt == 2:
+        print('------------- ABSOLUTE MAP ------------------')
         d.print_map(d.map)
 
     else:
