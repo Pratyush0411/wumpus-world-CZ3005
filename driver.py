@@ -87,8 +87,8 @@ class Driver:
             cell = self.wall
         else:
             cell = self.map[x][y]
-        if cell[0][0] == '%':
-            percept += "Confunded-"
+        if cell[1][1] == 'O' or cell[0][0] == '%':
+            percepts += "Confunded-"
             percepts_arr.append("on")
         else:
             percepts += "C-"
@@ -156,6 +156,8 @@ class Driver:
                 [self.get_cell('nothing'), self.get_cell(
                     'nothing'), self.get_cell('nothing')]
             ]
+        print('-------- REPOSITION SUCCESSFULL ---------')
+        print("Agent's new absolute position: ", self.agent_abs_pos)
         # self.delta = [self.agent_relative[0] - self.agent_abs_pos[0],
         #               self.agent_relative[1] - self.agent_abs_pos[1]]
 
@@ -260,7 +262,7 @@ class Driver:
         for node in visited_safe:
             adj_list = self.get_adj(node['X'], node['Y'])
             for neighbour in adj_list:
-                if bool(prolog.query(f"safe({neighbour[0]},{neighbour[1]})")) and neighbour not in unvisited_safe and neighbour not in visited_at:
+                if bool(prolog.query(f"safe({neighbour[0]},{neighbour[1]})")) and neighbour not in unvisited_safe and neighbour not in visited_at and neighbour in map:
                     unvisited_safe.append(map[neighbour])
 
         for i in range(len(self.relative_map)):
@@ -323,17 +325,12 @@ class Driver:
                 else:
                     _7 = 'noGlitter'
 
-                if (i, j) in glitter_at:
-                    _7 = 'Glitter'
-                else:
-                    _7 = 'noGlitter'
-
                 if self.bump and (i, j) == self.agent_relative[0]:
                     _8 = 'bumpOn'
                 else:
                     _8 = 'bumpOff'
 
-                if self.scream:
+                if self.scream and (i, j) == self.agent_relative[0]:
                     _9 = 'screamOn'
                 else:
                     _9 = 'screamOff'
@@ -468,7 +465,9 @@ class Driver:
                     list(prolog.query(f"reposition({percepts_arr})"))
                     current = list(prolog.query('current(X,Y,D)'))
                     self.reposition_agent(current)
-                    print("reposition successful")
+                    last = False
+                    percepts, percepts_arr = self.get_percepts(
+                        self.agent_abs_pos[0], self.agent_abs_pos[1])
 
                 self.update_relative_map(last, prolog)
                 print('Percepts: ', percepts)
@@ -493,6 +492,8 @@ while (True):
     opt = int(input())
     d = Driver()
     if opt == 1:
+        filename = "TeamSP-testPrintout-Self-Self.txt"
+        sys.stdout = open(file=filename, mode="w", encoding="utf8")
         print('------------- ABSOLUTE MAP ------------------')
         d.print_map(d.map)
         print('-------------- GAME BEGINS ------------------')
